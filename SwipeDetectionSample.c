@@ -1,12 +1,3 @@
-/* Copyright (C) 2012-2017 Ultraleap Limited. All rights reserved.
- *
- * Use of this code is subject to the terms of the Ultraleap SDK agreement
- * available at https://central.leapmotion.com/agreements/SdkAgreement unless
- * Ultraleap has signed a separate license agreement with you or your
- * organisation.
- *
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h> // For time functions
@@ -23,10 +14,51 @@
 
 // Debounce settings
 const float swipeThreshold = 0.05; // Adjust threshold based on your needs
-const int debounceInterval = 1; // Debounce interval in seconds
+const int debounceInterval = 2; // Increased debounce interval in seconds
+const int swipeWindowSize = 10; // Number of data points to average swipe distance
+
 time_t lastSwipeTime = 0; // Last time a swipe was detected
+float* handPositionHistory; // Swipe history buffer
+int historyIndex = 0; // Current index for history buffer
+int handDetected = 0; // Flag to indicate whether a hand is detected
 float lastHandPositionX = 0; // Last X position of the hand
 int64_t lastFrameID = 0; // The last frame received
+
+void initializeHistory() {
+    handPositionHistory = (float*)malloc(swipeWindowSize * sizeof(float));
+    if (handPositionHistory == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(EXIT_FAILURE);
+    }
+    for (int i = 0; i < swipeWindowSize; i++) {
+        handPositionHistory[i] = 0;
+    }
+    historyIndex = 0;
+}
+
+void freeHistory() {
+    free(handPositionHistory);
+}
+
+void addToHistory(float positionX) {
+    handPositionHistory[historyIndex] = positionX;
+    historyIndex = (historyIndex + 1) % swipeWindowSize;
+}
+
+float getAverageSwipeDistance() {
+    float sum = 0;
+    for (int i = 0; i < swipeWindowSize; i++) {
+        sum += handPositionHistory[i];
+    }
+    return sum / swipeWindowSize;
+}
+
+void resetHistory() {
+    for (int i = 0; i < swipeWindowSize; i++) {
+        handPositionHistory[i] = 0;
+    }
+    historyIndex = 0;
+}
 
 void detectSwipe(float prevPositionX, float currPositionX) {
     time_t currentTime = time(NULL);
@@ -36,15 +68,21 @@ void detectSwipe(float prevPositionX, float currPositionX) {
         return;
     }
 
-    if (currPositionX - prevPositionX > swipeThreshold) {
-        printf("Swipe RIGHT detected.\n");
+    // Add current position to history
+    addToHistory(currPositionX);
+
+    // Calculate average swipe distance
+    float averageSwipeDistance = getAverageSwipeDistance();
+
+    if (currPositionX - prevPositionX > averageSwipeDistance + swipeThreshold) {
+        printf("Swipe LEFT detected.\n");
         // Simulate Ctrl + Page Down
         if (!system("ydotool key CTRL+ALT+LEFT")) {
-            printf("Simulated  CTRL+ALT+LEFT\n");
+            printf("Simulated CTRL+ALT+LEFT\n");
         }
         lastSwipeTime = currentTime; // Update last swipe time
-    } else if (prevPositionX - currPositionX > swipeThreshold) {
-        printf("Swipe LEFT detected.\n");
+    } else if (prevPositionX - currPositionX > averageSwipeDistance + swipeThreshold) {
+        printf("Swipe RIGHT detected.\n");
         // Simulate Ctrl + Page Up
         if (!system("ydotool key CTRL+ALT+RIGHT")) {
             printf("Simulated CTRL+ALT+RIGHT\n");
@@ -65,24 +103,36 @@ int main(int argc, char** argv) {
 
     printf("Listening is ready. Waiting for swipes...\n");
 
+    initializeHistory();
+
     for (;;) {
         LEAP_TRACKING_EVENT *frame = GetFrame();
         if (frame && (frame->tracking_frame_id > lastFrameID)) {
             lastFrameID = frame->tracking_frame_id;
 
-            for (uint32_t h = 0; h < frame->nHands; h++) {
-                LEAP_HAND* hand = &frame->pHands[h];
+            if (frame->nHands > 0) {
+                handDetected = 1; // Hand detected
+                for (uint32_t h = 0; h < frame->nHands; h++) {
+                    LEAP_HAND* hand = &frame->pHands[h];
 
-                float currentHandPositionX = hand->palm.position.x;
+                    float currentHandPositionX = hand->palm.position.x;
 
-                // Detect swipe
-                detectSwipe(lastHandPositionX, currentHandPositionX);
+                    // Detect swipe
+                    detectSwipe(lastHandPositionX, currentHandPositionX);
 
-                // Update last position for the next frame
-                lastHandPositionX = currentHandPositionX;
+                    // Update last position for the next frame
+                    lastHandPositionX = currentHandPositionX;
+                }
+            } else if (handDetected) {
+                // No hands detected, reset history
+                printf("No hand detected, clearing history.\n");
+                resetHistory();
+                handDetected = 0; // No hand detected
             }
         }
     } // ctrl-c to exit
+
+    freeHistory();
     return 0;
 }
 // End-of-Sample
