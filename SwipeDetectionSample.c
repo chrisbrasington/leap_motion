@@ -22,13 +22,10 @@ float initialHandPositionX = 0; // Initial X position of the hand
 float finalHandPositionX = 0; // Final X position of the hand
 int handDetected = 0; // Flag to indicate whether a hand is detected
 int64_t lastFrameID = 0; // The last frame received
-time_t handDetectedStartTime = 0; // Time when hand was first detected
-time_t currentTime; // Current time
 
 void detectSwipe(float initialPositionX, float finalPositionX) {
     float distance = finalPositionX - initialPositionX; // Calculate the distance of the swipe
 
-    // Determine swipe direction based on threshold
     if (distance > swipeThreshold) {
         // Swipe RIGHT detected
         printf("Swipe RIGHT detected. Distance: %.2f\n", distance);
@@ -62,19 +59,10 @@ int main(int argc, char** argv) {
 
             if (frame->nHands > 0) {
                 handDetected = 1; // Hand detected
-                time(&currentTime); // Get current time
-                if (handDetectedStartTime == 0) {
-                    // Initialize hand detection start time when first hand is detected
-                    handDetectedStartTime = currentTime;
-                }
-
                 for (uint32_t h = 0; h < frame->nHands; h++) {
                     LEAP_HAND* hand = &frame->pHands[h];
 
                     float currentHandPositionX = hand->palm.position.x;
-                    // printf("Current Hand Position X: %f\n", currentHandPositionX);
-
-                    // Initialize the hand positions when the hand is first detected
                     if (!handDetected) {
                         initialHandPositionX = currentHandPositionX;
                     }
@@ -84,11 +72,9 @@ int main(int argc, char** argv) {
                 }
             } else if (handDetected) {
                 // No hands detected, process the swipe
-                time(&currentTime); // Get current time
                 printf("No hand detected, detecting swipe.\n");
                 detectSwipe(initialHandPositionX, finalHandPositionX);
                 handDetected = 0; // Reset hand detection flag
-                handDetectedStartTime = 0; // Reset hand detection start time
             }
         }
         // Sleep to avoid high CPU usage; adjust sleep time as needed
