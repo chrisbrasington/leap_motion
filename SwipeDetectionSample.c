@@ -17,22 +17,25 @@ void detectSwipe(float initialPositionX, float finalPositionX);
 
 // Swipe settings
 const float swipeThreshold = 10.0; // Adjust threshold based on your needs (10 inches)
+const float absenceDuration = 0.5; // Duration in seconds to confirm hand absence
 
 float initialHandPositionX = 0; // Initial X position of the hand
 float finalHandPositionX = 0; // Final X position of the hand
 int handDetected = 0; // Flag to indicate whether a hand is detected
 int64_t lastFrameID = 0; // The last frame received
+time_t handAbsentStartTime = 0; // Time when hand was last detected
+time_t currentTime; // Current time
 
 void detectSwipe(float initialPositionX, float finalPositionX) {
     // Determine swipe direction based on threshold
     if (finalPositionX - initialPositionX > swipeThreshold) {
         // Swipe RIGHT detected
         printf("Swipe RIGHT detected.\n");
-        // system("ydotool key ctrl+alt+right"); // Simulate CTRL+ALT+RIGHT
+        // system("ydotool key ctrl+alt+right 2>/dev/null"); // Simulate CTRL+ALT+RIGHT and suppress errors
     } else if (initialPositionX - finalPositionX > swipeThreshold) {
         // Swipe LEFT detected
         printf("Swipe LEFT detected.\n");
-        // system("ydotool key ctrl+alt+left"); // Simulate CTRL+ALT+LEFT
+        // system("ydotool key ctrl+alt+left 2>/dev/null"); // Simulate CTRL+ALT+LEFT and suppress errors
     } else {
         // Swipe distance is below threshold
         printf("Swipe distance too short.\n");
@@ -58,6 +61,8 @@ int main(int argc, char** argv) {
 
             if (frame->nHands > 0) {
                 handDetected = 1; // Hand detected
+                handAbsentStartTime = 0; // Reset absence start time
+
                 for (uint32_t h = 0; h < frame->nHands; h++) {
                     LEAP_HAND* hand = &frame->pHands[h];
 
@@ -73,10 +78,18 @@ int main(int argc, char** argv) {
                     finalHandPositionX = currentHandPositionX;
                 }
             } else if (handDetected) {
-                // No hands detected, detect swipe and reset detection
-                printf("No hand detected, detecting swipe.\n");
-                detectSwipe(initialHandPositionX, finalHandPositionX);
-                handDetected = 0; // Reset hand detection flag
+                // No hands detected, check for absence duration
+                time(&currentTime); // Get current time
+
+                if (difftime(currentTime, handAbsentStartTime) >= absenceDuration) {
+                    // Confirm hand has been absent for 0.5 seconds
+                    printf("No hand detected, detecting swipe.\n");
+                    detectSwipe(initialHandPositionX, finalHandPositionX);
+                    handDetected = 0; // Reset hand detection flag
+                } else {
+                    // Update the absence start time
+                    handAbsentStartTime = currentTime;
+                }
             }
         }
         // Sleep to avoid high CPU usage; adjust sleep time as needed
