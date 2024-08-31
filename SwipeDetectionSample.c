@@ -16,16 +16,13 @@
 void detectSwipe(float initialPositionX, float finalPositionX);
 
 // Swipe settings
-const float swipeThreshold = 100.0; // Adjust threshold to 100 units for significant swipes
-const float handDetectionDuration = 1.0; // Duration in seconds to confirm hand detection
-const float absenceDuration = 0.2; // Duration in seconds to confirm hand absence
+const float swipeThreshold = 100.0; // Threshold to detect significant swipes
 
 float initialHandPositionX = 0; // Initial X position of the hand
 float finalHandPositionX = 0; // Final X position of the hand
 int handDetected = 0; // Flag to indicate whether a hand is detected
 int64_t lastFrameID = 0; // The last frame received
 time_t handDetectedStartTime = 0; // Time when hand was first detected
-time_t handAbsentStartTime = 0; // Time when hand was last detected
 time_t currentTime; // Current time
 
 void detectSwipe(float initialPositionX, float finalPositionX) {
@@ -86,20 +83,12 @@ int main(int argc, char** argv) {
                     finalHandPositionX = currentHandPositionX;
                 }
             } else if (handDetected) {
-                // No hands detected, check for absence duration
+                // No hands detected, process the swipe
                 time(&currentTime); // Get current time
-
-                if (difftime(currentTime, handDetectedStartTime) >= handDetectionDuration) {
-                    // Confirm hand has been detected for at least 1 second
-                    handAbsentStartTime = currentTime; // Start tracking hand absence
-                    printf("No hand detected, detecting swipe.\n");
-                    detectSwipe(initialHandPositionX, finalHandPositionX);
-                    handDetected = 0; // Reset hand detection flag
-                    handDetectedStartTime = 0; // Reset hand detection start time
-                }
-            } else {
-                // Update the absence start time
-                time(&handAbsentStartTime); // Get current time
+                printf("No hand detected, detecting swipe.\n");
+                detectSwipe(initialHandPositionX, finalHandPositionX);
+                handDetected = 0; // Reset hand detection flag
+                handDetectedStartTime = 0; // Reset hand detection start time
             }
         }
         // Sleep to avoid high CPU usage; adjust sleep time as needed
