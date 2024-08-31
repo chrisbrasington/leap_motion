@@ -29,18 +29,20 @@ time_t handAbsentStartTime = 0; // Time when hand was last detected
 time_t currentTime; // Current time
 
 void detectSwipe(float initialPositionX, float finalPositionX) {
+    float distance = finalPositionX - initialPositionX; // Calculate the distance of the swipe
+
     // Determine swipe direction based on threshold
-    if (finalPositionX - initialPositionX > swipeThreshold) {
+    if (distance > swipeThreshold) {
         // Swipe RIGHT detected
-        printf("Swipe RIGHT detected.\n");
-        // system("ydotool key ctrl+alt+right 2>/dev/null"); // Simulate CTRL+ALT+RIGHT and suppress errors
-    } else if (initialPositionX - finalPositionX > swipeThreshold) {
+        printf("Swipe RIGHT detected. Distance: %.2f\n", distance);
+        system("ydotool key ctrl+alt+right 2>/dev/null"); // Simulate CTRL+ALT+RIGHT and suppress errors
+    } else if (-distance > swipeThreshold) {
         // Swipe LEFT detected
-        printf("Swipe LEFT detected.\n");
-        // system("ydotool key ctrl+alt+left 2>/dev/null"); // Simulate CTRL+ALT+LEFT and suppress errors
+        printf("Swipe LEFT detected. Distance: %.2f\n", -distance);
+        system("ydotool key ctrl+alt+left 2>/dev/null"); // Simulate CTRL+ALT+LEFT and suppress errors
     } else {
         // Swipe distance is below threshold
-        printf("Swipe distance too short.\n");
+        printf("Swipe distance too short. Distance: %.2f\n", distance);
     }
 }
 
