@@ -12,10 +12,9 @@
 #include "LeapC.h"
 #include "ExampleConnection.h"
 
-// Debounce settings
+// Swipe settings
 const float swipeThreshold = 0.05; // Adjust threshold based on your needs
-const int debounceInterval = 2; // Increased debounce interval in seconds
-const int swipeWindowSize = 10; // Number of data points to average swipe distance
+const int swipeWindowSize = 20; // Number of data points to average swipe distance
 
 time_t lastSwipeTime = 0; // Last time a swipe was detected
 float* handPositionHistory; // Swipe history buffer
@@ -61,13 +60,6 @@ void resetHistory() {
 }
 
 void detectSwipe(float prevPositionX, float currPositionX) {
-    time_t currentTime = time(NULL);
-
-    if (currentTime - lastSwipeTime < debounceInterval) {
-        // Skip swipe detection if within debounce interval
-        return;
-    }
-
     // Add current position to history
     addToHistory(currPositionX);
 
@@ -76,18 +68,24 @@ void detectSwipe(float prevPositionX, float currPositionX) {
 
     if (currPositionX - prevPositionX > swipeThreshold) {
         // Swipe RIGHT detected
-        // if (!system("ydotool key CTRL+ALT+RIGHT")) {
-        //     printf("Simulated CTRL+ALT+RIGHT\n");
-        // }
         printf("Swipe LEFT detected.\n");
-        lastSwipeTime = currentTime; // Update last swipe time
+        resetHistory(); // Clear history after detection
+        lastSwipeTime = time(NULL); // Update last swipe time
+        #ifdef _WIN32
+        Sleep(2000); // Wait for 2 seconds on Windows
+        #else
+        sleep(2); // Wait for 2 seconds on Linux/Unix
+        #endif
     } else if (prevPositionX - currPositionX > swipeThreshold) {
         // Swipe LEFT detected
-        // if (!system("ydotool key CTRL+ALT+LEFT")) {
-        //     printf("Simulated CTRL+ALT+LEFT\n");
-        // }
         printf("Swipe RIGHT detected.\n");
-        lastSwipeTime = currentTime; // Update last swipe time
+        resetHistory(); // Clear history after detection
+        lastSwipeTime = time(NULL); // Update last swipe time
+        #ifdef _WIN32
+        Sleep(2000); // Wait for 2 seconds on Windows
+        #else
+        sleep(2); // Wait for 2 seconds on Linux/Unix
+        #endif
     }
 }
 
