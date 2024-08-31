@@ -16,13 +16,15 @@
 void detectSwipe(float initialPositionX, float finalPositionX);
 
 // Swipe settings
-const float swipeThreshold = 10.0; // Adjust threshold based on your needs (10 inches)
-const float absenceDuration = 0.5; // Duration in seconds to confirm hand absence
+const float swipeThreshold = 100.0; // Adjust threshold to 100 units for significant swipes
+const float handDetectionDuration = 1.0; // Duration in seconds to confirm hand detection
+const float absenceDuration = 0.7; // Duration in seconds to confirm hand absence
 
 float initialHandPositionX = 0; // Initial X position of the hand
 float finalHandPositionX = 0; // Final X position of the hand
 int handDetected = 0; // Flag to indicate whether a hand is detected
 int64_t lastFrameID = 0; // The last frame received
+time_t handDetectedStartTime = 0; // Time when hand was first detected
 time_t handAbsentStartTime = 0; // Time when hand was last detected
 time_t currentTime; // Current time
 
@@ -61,7 +63,11 @@ int main(int argc, char** argv) {
 
             if (frame->nHands > 0) {
                 handDetected = 1; // Hand detected
-                handAbsentStartTime = 0; // Reset absence start time
+                time(&currentTime); // Get current time
+                if (handDetectedStartTime == 0) {
+                    // Initialize hand detection start time when first hand is detected
+                    handDetectedStartTime = currentTime;
+                }
 
                 for (uint32_t h = 0; h < frame->nHands; h++) {
                     LEAP_HAND* hand = &frame->pHands[h];
@@ -81,15 +87,17 @@ int main(int argc, char** argv) {
                 // No hands detected, check for absence duration
                 time(&currentTime); // Get current time
 
-                if (difftime(currentTime, handAbsentStartTime) >= absenceDuration) {
-                    // Confirm hand has been absent for 0.5 seconds
+                if (difftime(currentTime, handDetectedStartTime) >= handDetectionDuration) {
+                    // Confirm hand has been detected for at least 1 second
+                    handAbsentStartTime = currentTime; // Start tracking hand absence
                     printf("No hand detected, detecting swipe.\n");
                     detectSwipe(initialHandPositionX, finalHandPositionX);
                     handDetected = 0; // Reset hand detection flag
-                } else {
-                    // Update the absence start time
-                    handAbsentStartTime = currentTime;
+                    handDetectedStartTime = 0; // Reset hand detection start time
                 }
+            } else {
+                // Update the absence start time
+                time(&handAbsentStartTime); // Get current time
             }
         }
         // Sleep to avoid high CPU usage; adjust sleep time as needed
