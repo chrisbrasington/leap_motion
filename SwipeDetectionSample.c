@@ -74,19 +74,19 @@ void detectSwipe(float prevPositionX, float currPositionX) {
     // Calculate average swipe distance
     float averageSwipeDistance = getAverageSwipeDistance();
 
-    if (currPositionX - prevPositionX > averageSwipeDistance + swipeThreshold) {
+    if (currPositionX - prevPositionX > swipeThreshold) {
+        // Swipe RIGHT detected
+        // if (!system("ydotool key CTRL+ALT+RIGHT")) {
+        //     printf("Simulated CTRL+ALT+RIGHT\n");
+        // }
         printf("Swipe LEFT detected.\n");
-        // Simulate Ctrl + Page Down
-        if (!system("ydotool key CTRL+ALT+LEFT")) {
-            printf("Simulated CTRL+ALT+LEFT\n");
-        }
         lastSwipeTime = currentTime; // Update last swipe time
-    } else if (prevPositionX - currPositionX > averageSwipeDistance + swipeThreshold) {
+    } else if (prevPositionX - currPositionX > swipeThreshold) {
+        // Swipe LEFT detected
+        // if (!system("ydotool key CTRL+ALT+LEFT")) {
+        //     printf("Simulated CTRL+ALT+LEFT\n");
+        // }
         printf("Swipe RIGHT detected.\n");
-        // Simulate Ctrl + Page Up
-        if (!system("ydotool key CTRL+ALT+RIGHT")) {
-            printf("Simulated CTRL+ALT+RIGHT\n");
-        }
         lastSwipeTime = currentTime; // Update last swipe time
     }
 }
@@ -130,9 +130,14 @@ int main(int argc, char** argv) {
                 handDetected = 0; // No hand detected
             }
         }
+        // Sleep to avoid high CPU usage; adjust sleep time as needed
+        #ifdef _WIN32
+        Sleep(10); // Sleep for 10 milliseconds on Windows
+        #else
+        usleep(10000); // Sleep for 10 milliseconds on Linux/Unix
+        #endif
     } // ctrl-c to exit
 
     freeHistory();
     return 0;
 }
-// End-of-Sample
