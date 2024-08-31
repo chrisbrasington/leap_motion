@@ -12,80 +12,30 @@
 #include "LeapC.h"
 #include "ExampleConnection.h"
 
-// Swipe settings
-const float swipeThreshold = 0.05; // Adjust threshold based on your needs
-const int swipeWindowSize = 20; // Number of data points to average swipe distance
+// Function prototypes
+void detectSwipe(float initialPositionX, float finalPositionX);
 
-time_t lastSwipeTime = 0; // Last time a swipe was detected
-float* handPositionHistory; // Swipe history buffer
-int historyIndex = 0; // Current index for history buffer
+// Swipe settings
+const float swipeThreshold = 10.0; // Adjust threshold based on your needs (10 inches)
+
+float initialHandPositionX = 0; // Initial X position of the hand
+float finalHandPositionX = 0; // Final X position of the hand
 int handDetected = 0; // Flag to indicate whether a hand is detected
-float lastHandPositionX = 0; // Last X position of the hand
 int64_t lastFrameID = 0; // The last frame received
 
-void initializeHistory() {
-    handPositionHistory = (float*)malloc(swipeWindowSize * sizeof(float));
-    if (handPositionHistory == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        exit(EXIT_FAILURE);
-    }
-    for (int i = 0; i < swipeWindowSize; i++) {
-        handPositionHistory[i] = 0;
-    }
-    historyIndex = 0;
-}
-
-void freeHistory() {
-    free(handPositionHistory);
-}
-
-void addToHistory(float positionX) {
-    handPositionHistory[historyIndex] = positionX;
-    historyIndex = (historyIndex + 1) % swipeWindowSize;
-}
-
-float getAverageSwipeDistance() {
-    float sum = 0;
-    for (int i = 0; i < swipeWindowSize; i++) {
-        sum += handPositionHistory[i];
-    }
-    return sum / swipeWindowSize;
-}
-
-void resetHistory() {
-    for (int i = 0; i < swipeWindowSize; i++) {
-        handPositionHistory[i] = 0;
-    }
-    historyIndex = 0;
-}
-
-void detectSwipe(float prevPositionX, float currPositionX) {
-    // Add current position to history
-    addToHistory(currPositionX);
-
-    // Calculate average swipe distance
-    float averageSwipeDistance = getAverageSwipeDistance();
-
-    if (currPositionX - prevPositionX > swipeThreshold) {
+void detectSwipe(float initialPositionX, float finalPositionX) {
+    // Determine swipe direction based on threshold
+    if (finalPositionX - initialPositionX > swipeThreshold) {
         // Swipe RIGHT detected
-        printf("Swipe LEFT detected.\n");
-        resetHistory(); // Clear history after detection
-        lastSwipeTime = time(NULL); // Update last swipe time
-        #ifdef _WIN32
-        Sleep(2000); // Wait for 2 seconds on Windows
-        #else
-        sleep(2); // Wait for 2 seconds on Linux/Unix
-        #endif
-    } else if (prevPositionX - currPositionX > swipeThreshold) {
-        // Swipe LEFT detected
         printf("Swipe RIGHT detected.\n");
-        resetHistory(); // Clear history after detection
-        lastSwipeTime = time(NULL); // Update last swipe time
-        #ifdef _WIN32
-        Sleep(2000); // Wait for 2 seconds on Windows
-        #else
-        sleep(2); // Wait for 2 seconds on Linux/Unix
-        #endif
+        // system("ydotool key ctrl+alt+right"); // Simulate CTRL+ALT+RIGHT
+    } else if (initialPositionX - finalPositionX > swipeThreshold) {
+        // Swipe LEFT detected
+        printf("Swipe LEFT detected.\n");
+        // system("ydotool key ctrl+alt+left"); // Simulate CTRL+ALT+LEFT
+    } else {
+        // Swipe distance is below threshold
+        printf("Swipe distance too short.\n");
     }
 }
 
@@ -101,8 +51,6 @@ int main(int argc, char** argv) {
 
     printf("Listening is ready. Waiting for swipes...\n");
 
-    initializeHistory();
-
     for (;;) {
         LEAP_TRACKING_EVENT *frame = GetFrame();
         if (frame && (frame->tracking_frame_id > lastFrameID)) {
@@ -114,18 +62,21 @@ int main(int argc, char** argv) {
                     LEAP_HAND* hand = &frame->pHands[h];
 
                     float currentHandPositionX = hand->palm.position.x;
+                    // printf("Current Hand Position X: %f\n", currentHandPositionX);
 
-                    // Detect swipe
-                    detectSwipe(lastHandPositionX, currentHandPositionX);
+                    // Initialize the hand positions when the hand is first detected
+                    if (!handDetected) {
+                        initialHandPositionX = currentHandPositionX;
+                    }
 
-                    // Update last position for the next frame
-                    lastHandPositionX = currentHandPositionX;
+                    // Update final position of the hand
+                    finalHandPositionX = currentHandPositionX;
                 }
             } else if (handDetected) {
-                // No hands detected, reset history
-                printf("No hand detected, clearing history.\n");
-                resetHistory();
-                handDetected = 0; // No hand detected
+                // No hands detected, detect swipe and reset detection
+                printf("No hand detected, detecting swipe.\n");
+                detectSwipe(initialHandPositionX, finalHandPositionX);
+                handDetected = 0; // Reset hand detection flag
             }
         }
         // Sleep to avoid high CPU usage; adjust sleep time as needed
@@ -136,6 +87,5 @@ int main(int argc, char** argv) {
         #endif
     } // ctrl-c to exit
 
-    freeHistory();
     return 0;
 }
