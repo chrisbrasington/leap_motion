@@ -26,19 +26,6 @@ int64_t lastFrameID = 0; // The last frame received
 void detectSwipe(float initialPositionX, float finalPositionX) {
     float distance = finalPositionX - initialPositionX; // Calculate the distance of the swipe
 
-    // if (distance > swipeThreshold) {
-    //     // Swipe RIGHT detected
-    //     printf("Swipe RIGHT detected. Distance: %.2f\n", distance);
-    //     system("ydotool key ctrl+alt+right 2>/dev/null"); // Simulate CTRL+ALT+RIGHT and suppress errors
-    // } else if (-distance > swipeThreshold) {
-    //     // Swipe LEFT detected
-    //     printf("Swipe LEFT detected. Distance: %.2f\n", -distance);
-    //     system("ydotool key ctrl+alt+left 2>/dev/null"); // Simulate CTRL+ALT+LEFT and suppress errors
-    // } else {
-    //     // Swipe distance is below threshold
-    //     printf("Swipe distance too short. Distance: %.2f\n", distance);
-    // }
-
     if (distance > swipeThreshold) {
         // Swipe LEFT detected
         printf("Swipe Swipe detected. Distance: %.2f\n", distance);
