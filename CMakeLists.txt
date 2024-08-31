@@ -80,5 +80,5 @@ function(add_sample sample_name sample_source_file)
     target_link_libraries(${sample_name} PUBLIC libExampleConnection)
 endfunction()
 
-# Only add the SwipeDetectionSample
 add_sample("SwipeDetectionSample" "SwipeDetectionSample.c")
+add_sample("ClickSample" "ClickSample.c")
