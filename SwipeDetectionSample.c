@@ -18,44 +18,44 @@ const int debounceInterval = 2; // Increased debounce interval in seconds
 const int swipeWindowSize = 10; // Number of data points to average swipe distance
 
 time_t lastSwipeTime = 0; // Last time a swipe was detected
-float* fingerPositionHistory; // Swipe history buffer
+float* handPositionHistory; // Swipe history buffer
 int historyIndex = 0; // Current index for history buffer
-int fingerDetected = 0; // Flag to indicate whether the finger is detected
-float lastFingerPositionX = 0; // Last X position of the finger
+int handDetected = 0; // Flag to indicate whether a hand is detected
+float lastHandPositionX = 0; // Last X position of the hand
 int64_t lastFrameID = 0; // The last frame received
 
 void initializeHistory() {
-    fingerPositionHistory = (float*)malloc(swipeWindowSize * sizeof(float));
-    if (fingerPositionHistory == NULL) {
+    handPositionHistory = (float*)malloc(swipeWindowSize * sizeof(float));
+    if (handPositionHistory == NULL) {
         fprintf(stderr, "Memory allocation failed\n");
         exit(EXIT_FAILURE);
     }
     for (int i = 0; i < swipeWindowSize; i++) {
-        fingerPositionHistory[i] = 0;
+        handPositionHistory[i] = 0;
     }
     historyIndex = 0;
 }
 
 void freeHistory() {
-    free(fingerPositionHistory);
+    free(handPositionHistory);
 }
 
 void addToHistory(float positionX) {
-    fingerPositionHistory[historyIndex] = positionX;
+    handPositionHistory[historyIndex] = positionX;
     historyIndex = (historyIndex + 1) % swipeWindowSize;
 }
 
 float getAverageSwipeDistance() {
     float sum = 0;
     for (int i = 0; i < swipeWindowSize; i++) {
-        sum += fingerPositionHistory[i];
+        sum += handPositionHistory[i];
     }
     return sum / swipeWindowSize;
 }
 
 void resetHistory() {
     for (int i = 0; i < swipeWindowSize; i++) {
-        fingerPositionHistory[i] = 0;
+        handPositionHistory[i] = 0;
     }
     historyIndex = 0;
 }
@@ -111,29 +111,23 @@ int main(int argc, char** argv) {
             lastFrameID = frame->tracking_frame_id;
 
             if (frame->nHands > 0) {
-                fingerDetected = 1; // Finger detected
+                handDetected = 1; // Hand detected
                 for (uint32_t h = 0; h < frame->nHands; h++) {
                     LEAP_HAND* hand = &frame->pHands[h];
 
-                    // Check if the hand has any fingers
-                    if (hand->nFingers > 0) {
-                        LEAP_FINGER* indexFinger = &hand->pFingers[0]; // Assuming index finger is the first
+                    float currentHandPositionX = hand->palm.position.x;
 
-                        // Use the tip position of the index finger
-                        float currentFingerPositionX = indexFinger->tip.position.x;
+                    // Detect swipe
+                    detectSwipe(lastHandPositionX, currentHandPositionX);
 
-                        // Detect swipe
-                        detectSwipe(lastFingerPositionX, currentFingerPositionX);
-
-                        // Update last position for the next frame
-                        lastFingerPositionX = currentFingerPositionX;
-                    }
+                    // Update last position for the next frame
+                    lastHandPositionX = currentHandPositionX;
                 }
-            } else if (fingerDetected) {
-                // No fingers detected, reset history
-                printf("No finger detected, clearing history.\n");
+            } else if (handDetected) {
+                // No hands detected, reset history
+                printf("No hand detected, clearing history.\n");
                 resetHistory();
-                fingerDetected = 0; // No finger detected
+                handDetected = 0; // No hand detected
             }
         }
     } // ctrl-c to exit
