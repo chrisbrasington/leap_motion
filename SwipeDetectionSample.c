@@ -18,7 +18,7 @@ void detectSwipe(float initialPositionX, float finalPositionX);
 // Swipe settings
 const float swipeThreshold = 100.0; // Adjust threshold to 100 units for significant swipes
 const float handDetectionDuration = 1.0; // Duration in seconds to confirm hand detection
-const float absenceDuration = 0.7; // Duration in seconds to confirm hand absence
+const float absenceDuration = 0.2; // Duration in seconds to confirm hand absence
 
 float initialHandPositionX = 0; // Initial X position of the hand
 float finalHandPositionX = 0; // Final X position of the hand
